@@ -11,11 +11,81 @@ YELLOW="\e[33m"
 BLUE="\e[34m"
 #----------------------------
 
+DOTFILES_REPO="${DOTFILES_REPO:-https://github.com/Anto426/dotfiles.git}"
+AUTO_SETUP_RAW_URL="${AUTO_SETUP_RAW_URL:-https://raw.githubusercontent.com/Anto426/auto-setup-LT/main}"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P || pwd)"
+
+install_neofetch_random() {
+    local target="$HOME/neofetch-random.sh"
+    local local_script="$SCRIPT_DIR/neofetch-random.sh"
+
+    if [[ -f "$local_script" ]]; then
+        install -m 755 "$local_script" "$target"
+    else
+        curl -fSL "$AUTO_SETUP_RAW_URL/neofetch-random.sh" -o "$target"
+        chmod +x "$target"
+    fi
+}
+
+clone_or_update() {
+    local repo="$1"
+    local target="$2"
+
+    if [[ -d "$target/.git" ]]; then
+        local current_remote
+        current_remote="$(git -C "$target" remote get-url origin 2>/dev/null || true)"
+
+        if [[ "$current_remote" == "$repo" ]]; then
+            git -C "$target" pull --ff-only || true
+        else
+            local backup="${target}.backup.$(date +%Y%m%d%H%M%S)"
+            mv "$target" "$backup"
+            echo -e "${BLUE}[NOTE]${GREEN} ==> Existing $target remote differs, moved to $backup"
+            git clone --depth=1 "$repo" "$target"
+        fi
+    elif [[ -e "$target" ]]; then
+        local backup="${target}.backup.$(date +%Y%m%d%H%M%S)"
+        mv "$target" "$backup"
+        echo -e "${BLUE}[NOTE]${GREEN} ==> Existing $target moved to $backup"
+        git clone --depth=1 "$repo" "$target"
+    else
+        git clone --depth=1 "$repo" "$target"
+    fi
+}
+
+install_yay() {
+    if command -v yay >/dev/null 2>&1; then
+        return 0
+    fi
+
+    local build_dir
+    build_dir="$(mktemp -d)"
+    git clone https://aur.archlinux.org/yay.git "$build_dir/yay"
+    (
+        cd "$build_dir/yay"
+        makepkg -si --noconfirm
+    )
+    rm -rf "$build_dir"
+}
+
+install_pwndbg() {
+    if [[ -d "$HOME/pwndbg/.git" ]]; then
+        git -C "$HOME/pwndbg" pull --ff-only || true
+    else
+        clone_or_update https://github.com/pwndbg/pwndbg "$HOME/pwndbg"
+    fi
+
+    (
+        cd "$HOME/pwndbg"
+        ./setup.sh
+    )
+}
+
 # Welcome message
 echo -e "
                     ${GREEN}\e[1mWELCOME!${GREEN} 
     Now we will customize Arch-based Terminal
-             Created by \e[1;4mPhunt_Vieg_
+             Created by \e[1;4manto426
 ${WHITE}"
 
 cd ~
@@ -35,11 +105,7 @@ sudo localectl set-locale LANG=en_US.UTF-8
 # Download some terminal tool
 echo -e "${GREEN}\n---------------------------------------------------------------------\n${YELLOW}[3/10]${GREEN} ==> Download some terminal tool\n---------------------------------------------------------------------\n${WHITE}"
 sudo pacman -S --noconfirm --needed base-devel git
-git clone https://aur.archlinux.org/yay.git
-cd yay
-makepkg -si --noconfirm
-cd ~
-rm -rf ~/yay
+install_yay
 
 
 pacman_packages=(
@@ -62,7 +128,7 @@ pacman_packages=(
 )
 aur_packages=(
     # System monitoring and fun terminal visuals
-    cbonsai pipes.sh pokemon-colorscripts-git oh-my-posh
+    cbonsai pipes.sh oh-my-posh
 
     # CTF tools
     pwninit
@@ -71,42 +137,44 @@ aur_packages=(
 
 # Download pacman packages
 echo -e "${GREEN}\n---------------------------------------------------------------------\n${YELLOW}[4/10]${GREEN} ==> Download pacman packages\n---------------------------------------------------------------------\n${WHITE}"
-sudo pacman -S --noconfirm "${pacman_packages[@]}"
+sudo pacman -S --needed --noconfirm "${pacman_packages[@]}"
 
 
 # Download yay packages
 echo -e "${GREEN}\n---------------------------------------------------------------------\n${YELLOW}[5/10]${GREEN} ==> Download yay packages\n---------------------------------------------------------------------\n${WHITE}"
-yay -S --noconfirm "${aur_packages[@]}"
+yay -S --needed --noconfirm "${aur_packages[@]}"
 
 
 # Download pwndbg and pwntools
 echo -e "${GREEN}\n---------------------------------------------------------------------\n${YELLOW}[7/10]${GREEN} ==> Download pwndbg and pwntools\n---------------------------------------------------------------------\n${WHITE}"
-git clone --depth=1 https://github.com/pwndbg/pwndbg
-cd pwndbg
-./setup.sh
-cd ..
+install_pwndbg
 sudo gem install one_gadget
 
 
-# Download file config"
+# Download file config
 echo -e "${GREEN}\n---------------------------------------------------------------------\n${YELLOW}[8/10]${GREEN} ==> Download file config\n---------------------------------------------------------------------\n${WHITE}"
-git clone --depth=1 https://github.com/ViegPhunt/Dotfiles.git ~/dotfiles
-git clone --depth=1 https://github.com/tmux-plugins/tpm ~/dotfiles/.tmux/plugins/tpm
+clone_or_update "$DOTFILES_REPO" "$HOME/dotfiles"
+clone_or_update https://github.com/tmux-plugins/tpm "$HOME/dotfiles/.tmux/plugins/tpm"
+install_neofetch_random
  
 
 # Stow
 echo -e "${GREEN}\n---------------------------------------------------------------------\n${YELLOW}[9/10]${GREEN} ==> Stow\n---------------------------------------------------------------------\n${WHITE}"
 cd ~/dotfiles
-./.config/viegphunt/backup_config.sh
+chmod +x ./.config/anto426/*.sh ./.config/anto426/wallpaper_effects.d/*.sh 2>/dev/null || true
+./.config/anto426/backup_config.sh
 stow -t ~ .
 cd ~
+if [[ -x "$HOME/.config/anto426/remote_sync.sh" ]]; then
+    ANTO426_SYNC_QUIET=1 "$HOME/.config/anto426/remote_sync.sh" init || true
+fi
 
 
 # Change shell
 echo -e "${GREEN}\n---------------------------------------------------------------------\n${YELLOW}[10/10]${GREEN} ==> Change shell\n---------------------------------------------------------------------\n${WHITE}"
 ZSH_PATH="$(which zsh)"
 grep -qxF "$ZSH_PATH" /etc/shells || echo "$ZSH_PATH" | sudo tee -a /etc/shells
-chsh -s "$ZSH_PATH"
+chsh -s "$ZSH_PATH" "$USER" || echo -e "${BLUE}[NOTE]${GREEN} ==> Could not change shell automatically. Run: chsh -s $ZSH_PATH"
 
 
 echo -e "\n ${GREEN}

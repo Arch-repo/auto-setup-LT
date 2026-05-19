@@ -11,12 +11,82 @@ YELLOW="\e[33m"
 BLUE="\e[34m"
 #----------------------------
 
+DOTFILES_REPO="${DOTFILES_REPO:-https://github.com/Anto426/dotfiles.git}"
+AUTO_SETUP_RAW_URL="${AUTO_SETUP_RAW_URL:-https://raw.githubusercontent.com/Anto426/auto-setup-LT/main}"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P || pwd)"
+
+install_neofetch_random() {
+    local target="$HOME/neofetch-random.sh"
+    local local_script="$SCRIPT_DIR/neofetch-random.sh"
+
+    if [[ -f "$local_script" ]]; then
+        install -m 755 "$local_script" "$target"
+    else
+        curl -fSL "$AUTO_SETUP_RAW_URL/neofetch-random.sh" -o "$target"
+        chmod +x "$target"
+    fi
+}
+
+clone_or_update() {
+    local repo="$1"
+    local target="$2"
+
+    if [[ -d "$target/.git" ]]; then
+        local current_remote
+        current_remote="$(git -C "$target" remote get-url origin 2>/dev/null || true)"
+
+        if [[ "$current_remote" == "$repo" ]]; then
+            git -C "$target" pull --ff-only || true
+        else
+            local backup="${target}.backup.$(date +%Y%m%d%H%M%S)"
+            mv "$target" "$backup"
+            echo -e "${BLUE}[NOTE]${GREEN} ==> Existing $target remote differs, moved to $backup"
+            git clone --depth=1 "$repo" "$target"
+        fi
+    elif [[ -e "$target" ]]; then
+        local backup="${target}.backup.$(date +%Y%m%d%H%M%S)"
+        mv "$target" "$backup"
+        echo -e "${BLUE}[NOTE]${GREEN} ==> Existing $target moved to $backup"
+        git clone --depth=1 "$repo" "$target"
+    else
+        git clone --depth=1 "$repo" "$target"
+    fi
+}
+
+apt_install_available() {
+    local available=()
+    local package
+
+    for package in "$@"; do
+        if apt-cache show "$package" >/dev/null 2>&1; then
+            available+=("$package")
+        else
+            echo -e "${BLUE}[NOTE]${GREEN} ==> APT package not available, skipping: $package"
+        fi
+    done
+
+    ((${#available[@]} == 0)) || sudo apt install -y "${available[@]}"
+}
+
+install_pwndbg() {
+    if [[ -d "$HOME/pwndbg/.git" ]]; then
+        git -C "$HOME/pwndbg" pull --ff-only || true
+    else
+        clone_or_update https://github.com/pwndbg/pwndbg "$HOME/pwndbg"
+    fi
+
+    (
+        cd "$HOME/pwndbg"
+        ./setup.sh
+    )
+}
+
 
 # Welcome message
 echo -e "
                     ${GREEN}\e[1mWELCOME!${GREEN} 
     Now we will customize Debian-based Terminal
-             Created by \e[1;4mPhunt_Vieg_
+             Created by \e[1;4manto426
 ${WHITE}"
 
 cd ~
@@ -33,7 +103,7 @@ sudo apt update && sudo apt upgrade -y
 
 # Download some terminal tool
 echo -e "${GREEN}\n---------------------------------------------------------------------\n${YELLOW}[2/7]${GREEN} ==> Download some terminal tool\n---------------------------------------------------------------------\n${WHITE}"
-sudo apt install -y build-essential
+sudo apt install -y build-essential git curl wget jq ca-certificates
 pkgs=(
     # System monitoring and fun terminal visuals
     btop cmatrix cbonsai cowsay
@@ -51,7 +121,7 @@ pkgs=(
     # Shell & customization
     zsh
 )
-sudo apt install -y "${pkgs[@]}"
+apt_install_available "${pkgs[@]}"
 
 
 # Install fastfetch
@@ -90,12 +160,7 @@ rm -rf pipes.sh
 cd ~
 
 
-# Install pokemon-colorscripts
-git clone --depth=1 https://gitlab.com/phoneybadger/pokemon-colorscripts.git
-cd pokemon-colorscripts
-sudo ./install.sh
-cd ..
-rm -rf ~/pokemon-colorscripts
+# Fastfetch random images are handled by ~/neofetch-random.sh.
 
 
 # Install oh-my-posh
@@ -110,32 +175,34 @@ sudo chmod +x /usr/bin/pwninit
 
 # Download pwndbg and pwntools
 echo -e "${GREEN}\n---------------------------------------------------------------------\n${YELLOW}[4/7]${GREEN} ==> Download pwndbg and pwntools\n---------------------------------------------------------------------\n${WHITE}"
-git clone --depth=1 https://github.com/pwndbg/pwndbg
-cd pwndbg
-./setup.sh
-cd ..
+install_pwndbg
 sudo gem install one_gadget
 
 
 # Download file config
 echo -e "${GREEN}\n---------------------------------------------------------------------\n${YELLOW}[5/7]${GREEN} ==> Download file config\n---------------------------------------------------------------------\n${WHITE}"
-git clone --depth=1 https://github.com/ViegPhunt/Dotfiles.git ~/dotfiles
-git clone --depth=1 https://github.com/tmux-plugins/tpm ~/dotfiles/.tmux/plugins/tpm
+clone_or_update "$DOTFILES_REPO" "$HOME/dotfiles"
+clone_or_update https://github.com/tmux-plugins/tpm "$HOME/dotfiles/.tmux/plugins/tpm"
+install_neofetch_random
 
 
 # Stow
 echo -e "${GREEN}\n---------------------------------------------------------------------\n${YELLOW}[6/7]${GREEN} ==> Stow\n---------------------------------------------------------------------\n${WHITE}"
 cd ~/dotfiles
-./.config/viegphunt/backup_config.sh
+chmod +x ./.config/anto426/*.sh ./.config/anto426/wallpaper_effects.d/*.sh 2>/dev/null || true
+./.config/anto426/backup_config.sh
 stow -t ~ .
 cd ~
+if [[ -x "$HOME/.config/anto426/remote_sync.sh" ]]; then
+    ANTO426_SYNC_QUIET=1 "$HOME/.config/anto426/remote_sync.sh" init || true
+fi
 
 
 # Change terminam
 echo -e "${GREEN}\n---------------------------------------------------------------------\n${YELLOW}[7/7]${GREEN} ==> Change shell\n---------------------------------------------------------------------\n${WHITE}"
 ZSH_PATH="$(which zsh)"
 grep -qxF "$ZSH_PATH" /etc/shells || echo "$ZSH_PATH" | sudo tee -a /etc/shells
-chsh -s "$ZSH_PATH"
+chsh -s "$ZSH_PATH" "$USER" || echo -e "${BLUE}[NOTE]${GREEN} ==> Could not change shell automatically. Run: chsh -s $ZSH_PATH"
 
 
 echo -e "\n ${GREEN}
