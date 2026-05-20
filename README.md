@@ -37,6 +37,8 @@ sudo pacman -Syu --noconfirm
 bash -c "$(curl -fSL https://raw.githubusercontent.com/Anto426/auto-setup-LT/main/arch.sh)"
 ```
 
+To test a fork or local mirror, override `DOTFILES_REPO` before running the script.
+
 ### Debian-based Distributions
 *Example: Ubuntu, Kali Linux, Linux Mint, etc.*
 ``` bash

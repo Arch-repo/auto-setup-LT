@@ -113,7 +113,7 @@ pacman_packages=(
     btop cmatrix cowsay fastfetch
 
     # Essential utilities
-    make curl wget unzip dpkg ripgrep fd man openssh netcat
+    make curl wget unzip dpkg ripgrep fd man openssh openbsd-netcat
     fzf eza bat zoxide neovim tmux stow
     lazydocker lazygit
 
@@ -121,7 +121,7 @@ pacman_packages=(
     perl-image-exiftool gdb ascii ltrace strace checksec patchelf upx binwalk
 
     # Programming languages
-    python3 python-pip nodejs npm ruby go
+    python python-pip nodejs npm ruby go
 
     # Shell & customization
     zsh
