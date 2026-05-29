@@ -65,7 +65,7 @@ bash -c "$(curl -fSL https://raw.githubusercontent.com/Anto426/auto-setup-LT/mai
 root@anto426: ~/auto-setup-lt (main⚡)$ cat connections.json
 
 {
-  "dotfiles_source": "https://github.com/Anto426/dotfiles",
+  "dotfiles_source": "https://github.com/Arch-repo/dotfiles",
   "sync_environment": "~/.local/share/anto426/sync.env"
 }
 ```
@@ -77,3 +77,4 @@ root@anto426: ~/auto-setup-lt (main⚡)$ cat connections.json
 <div align="center">
   <i>Configured by anto426</i>
 </div>
+

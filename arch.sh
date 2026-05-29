@@ -11,7 +11,7 @@ YELLOW="\e[33m"
 BLUE="\e[34m"
 #----------------------------
 
-DOTFILES_REPO="${DOTFILES_REPO:-https://github.com/Anto426/dotfiles.git}"
+DOTFILES_REPO="${DOTFILES_REPO:-https://github.com/Arch-repo/dotfiles.git}"
 AUTO_SETUP_RAW_URL="${AUTO_SETUP_RAW_URL:-https://raw.githubusercontent.com/Anto426/auto-setup-LT/main}"
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P || pwd)"
 
@@ -184,3 +184,4 @@ echo -e "\n ${GREEN}
  **************************************************
  
 "
+
