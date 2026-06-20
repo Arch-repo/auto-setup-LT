@@ -13,7 +13,20 @@ BLUE="\e[34m"
 
 DOTFILES_REPO="${DOTFILES_REPO:-https://github.com/Arch-repo/dotfiles.git}"
 AUTO_SETUP_RAW_URL="${AUTO_SETUP_RAW_URL:-https://raw.githubusercontent.com/Arch-repo/auto-setup-LT/main}"
+AUTO_SETUP_EMBEDDED="${AUTO_SETUP_EMBEDDED:-0}"
+AUTO_SETUP_RUN_DOTFILES_INSTALLER="${AUTO_SETUP_RUN_DOTFILES_INSTALLER:-0}"
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P || pwd)"
+
+is_enabled() {
+    case "${1,,}" in
+        1 | true | yes | on) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+is_embedded() {
+    is_enabled "$AUTO_SETUP_EMBEDDED"
+}
 
 install_neofetch_random() {
     local target="$HOME/neofetch-random.sh"
@@ -109,7 +122,11 @@ cd ~
 
 # Updating the system
 echo -e "${GREEN}\n---------------------------------------------------------------------\n${YELLOW}[1/10]${GREEN} ==> Updating system packages\n---------------------------------------------------------------------\n${WHITE}"
-sudo pacman -Syu --noconfirm
+if is_embedded; then
+    echo -e "${BLUE}[NOTE]${GREEN} ==> Embedded mode: system update is handled by the parent installer."
+else
+    sudo pacman -Syu --noconfirm
+fi
 
 
 # Setting locale 
@@ -170,25 +187,40 @@ sudo gem install one_gadget
 
 # Download file config
 echo -e "${GREEN}\n---------------------------------------------------------------------\n${YELLOW}[7/10]${GREEN} ==> Download file config\n---------------------------------------------------------------------\n${WHITE}"
-clone_or_update "$DOTFILES_REPO" "$HOME/dotfiles"
-clone_or_update https://github.com/tmux-plugins/tpm "$HOME/dotfiles/.tmux/plugins/tpm"
 install_neofetch_random
+if is_embedded; then
+    echo -e "${BLUE}[NOTE]${GREEN} ==> Embedded mode: dotfiles clone is handled by the parent installer."
+else
+    clone_or_update "$DOTFILES_REPO" "$HOME/dotfiles"
+    clone_or_update https://github.com/tmux-plugins/tpm "$HOME/dotfiles/.tmux/plugins/tpm"
+fi
 
 
 # Install complete dotfiles package set
-echo -e "${GREEN}\n---------------------------------------------------------------------\n${YELLOW}[8/10]${GREEN} ==> Install complete dotfiles package set\n---------------------------------------------------------------------\n${WHITE}"
-install_dotfiles_dependencies
+echo -e "${GREEN}\n---------------------------------------------------------------------\n${YELLOW}[8/10]${GREEN} ==> Dotfiles package handoff\n---------------------------------------------------------------------\n${WHITE}"
+if is_embedded; then
+    echo -e "${BLUE}[NOTE]${GREEN} ==> Embedded mode: dotfiles packages are handled by the parent installer."
+elif is_enabled "$AUTO_SETUP_RUN_DOTFILES_INSTALLER"; then
+    install_dotfiles_dependencies
+else
+    echo -e "${BLUE}[NOTE]${GREEN} ==> Skipping full dotfiles package installer."
+    echo -e "${BLUE}[NOTE]${GREEN} ==> Run ~/.config/anto426/install_archpkg.sh or use Arch-Hyprland for the full desktop flow."
+fi
  
 
 # Stow
 echo -e "${GREEN}\n---------------------------------------------------------------------\n${YELLOW}[9/10]${GREEN} ==> Stow\n---------------------------------------------------------------------\n${WHITE}"
-cd ~/dotfiles
-chmod +x ./.config/anto426/*.sh ./.config/anto426/wallpaper_effects.d/*.sh 2>/dev/null || true
-./.config/anto426/backup_config.sh
-stow -t ~ .
-cd ~
-if [[ -x "$HOME/.config/anto426/remote_sync.sh" ]]; then
-    ANTO426_SYNC_QUIET=1 "$HOME/.config/anto426/remote_sync.sh" init || true
+if is_embedded; then
+    echo -e "${BLUE}[NOTE]${GREEN} ==> Embedded mode: stow is handled by the parent installer."
+else
+    cd ~/dotfiles
+    chmod +x ./.config/anto426/*.sh ./.config/anto426/wallpaper_effects.d/*.sh 2>/dev/null || true
+    ./.config/anto426/backup_config.sh
+    stow -t ~ .
+    cd ~
+    if [[ -x "$HOME/.config/anto426/remote_sync.sh" ]]; then
+        ANTO426_SYNC_QUIET=1 "$HOME/.config/anto426/remote_sync.sh" init || true
+    fi
 fi
 
 

@@ -66,7 +66,9 @@ root@anto426: ~/auto-setup-lt (main⚡)$ cat connections.json
 
 {
   "dotfiles_source": "https://github.com/Arch-repo/dotfiles",
-  "sync_environment": "~/.local/share/anto426/sync.env"
+  "sync_environment": "~/.local/share/anto426/sync.env",
+  "embedded_mode": "AUTO_SETUP_EMBEDDED=1 lets Arch-Hyprland use only the terminal/base tooling flow",
+  "full_dotfiles_packages": "AUTO_SETUP_RUN_DOTFILES_INSTALLER=1 opts into ~/.config/anto426/install_archpkg.sh"
 }
 ```
 
