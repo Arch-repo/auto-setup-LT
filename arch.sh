@@ -12,7 +12,7 @@ BLUE="\e[34m"
 #----------------------------
 
 DOTFILES_REPO="${DOTFILES_REPO:-https://github.com/Arch-repo/dotfiles.git}"
-AUTO_SETUP_RAW_URL="${AUTO_SETUP_RAW_URL:-https://raw.githubusercontent.com/Anto426/auto-setup-LT/main}"
+AUTO_SETUP_RAW_URL="${AUTO_SETUP_RAW_URL:-https://raw.githubusercontent.com/Arch-repo/auto-setup-LT/main}"
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P || pwd)"
 
 install_neofetch_random() {
@@ -81,6 +81,23 @@ install_pwndbg() {
     )
 }
 
+install_dotfiles_dependencies() {
+    local installer="$HOME/dotfiles/.config/anto426/install_archpkg.sh"
+
+    if [[ "${AUTO_SETUP_SKIP_DOTFILES_INSTALLER:-0}" == "1" ]]; then
+        echo -e "${BLUE}[NOTE]${GREEN} ==> Skipping full dotfiles package installer."
+        return 0
+    fi
+
+    if [[ ! -f "$installer" ]]; then
+        echo -e "${BLUE}[NOTE]${GREEN} ==> Dotfiles installer not found: $installer"
+        return 0
+    fi
+
+    chmod +x "$installer"
+    "$installer"
+}
+
 # Welcome message
 echo -e "
                     ${GREEN}\e[1mWELCOME!${GREEN} 
@@ -146,16 +163,21 @@ yay -S --needed --noconfirm "${aur_packages[@]}"
 
 
 # Download pwndbg and pwntools
-echo -e "${GREEN}\n---------------------------------------------------------------------\n${YELLOW}[7/10]${GREEN} ==> Download pwndbg and pwntools\n---------------------------------------------------------------------\n${WHITE}"
+echo -e "${GREEN}\n---------------------------------------------------------------------\n${YELLOW}[6/10]${GREEN} ==> Download pwndbg and pwntools\n---------------------------------------------------------------------\n${WHITE}"
 install_pwndbg
 sudo gem install one_gadget
 
 
 # Download file config
-echo -e "${GREEN}\n---------------------------------------------------------------------\n${YELLOW}[8/10]${GREEN} ==> Download file config\n---------------------------------------------------------------------\n${WHITE}"
+echo -e "${GREEN}\n---------------------------------------------------------------------\n${YELLOW}[7/10]${GREEN} ==> Download file config\n---------------------------------------------------------------------\n${WHITE}"
 clone_or_update "$DOTFILES_REPO" "$HOME/dotfiles"
 clone_or_update https://github.com/tmux-plugins/tpm "$HOME/dotfiles/.tmux/plugins/tpm"
 install_neofetch_random
+
+
+# Install complete dotfiles package set
+echo -e "${GREEN}\n---------------------------------------------------------------------\n${YELLOW}[8/10]${GREEN} ==> Install complete dotfiles package set\n---------------------------------------------------------------------\n${WHITE}"
+install_dotfiles_dependencies
  
 
 # Stow
@@ -184,4 +206,3 @@ echo -e "\n ${GREEN}
  **************************************************
  
 "
-
