@@ -18,6 +18,8 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -
 install_neofetch_random() {
     local target="$HOME/neofetch-random.sh"
     local local_script="$SCRIPT_DIR/neofetch-random.sh"
+    local logo_target="${XDG_CONFIG_HOME:-$HOME/.config}/fastfetch/ascii-logo.txt"
+    local local_logo="$SCRIPT_DIR/fastfetch/ascii-logo.txt"
 
     if [[ -f "$local_script" ]]; then
         install -m 755 "$local_script" "$target"
@@ -25,6 +27,29 @@ install_neofetch_random() {
         curl -fSL "$AUTO_SETUP_RAW_URL/neofetch-random.sh" -o "$target"
         chmod +x "$target"
     fi
+
+    mkdir -p "$(dirname "$logo_target")"
+    if [[ -f "$local_logo" ]]; then
+        install -m 644 "$local_logo" "$logo_target"
+    else
+        curl -fSL "$AUTO_SETUP_RAW_URL/fastfetch/ascii-logo.txt" -o "$logo_target" || true
+    fi
+
+    clear_fastfetch_neofetch_cache
+}
+
+clear_fastfetch_neofetch_cache() {
+    local source_dir="${ANTO426_NEOFETCH_DIR:-$HOME/Pictures/neofetch}"
+    local cache_home cache_dir
+
+    [[ "$source_dir" == /* && "$source_dir" != "/" ]] || return 0
+
+    for cache_home in "$HOME/.cache" "${XDG_CACHE_HOME:-}"; do
+        [[ -n "$cache_home" ]] || continue
+        cache_dir="$cache_home/fastfetch/images$source_dir"
+        [[ "$cache_dir" == "$cache_home/fastfetch/images/"* ]] || continue
+        rm -rf "$cache_dir"
+    done
 }
 
 clone_or_update() {
@@ -212,4 +237,3 @@ echo -e "\n ${GREEN}
  **************************************************
  
 "
-

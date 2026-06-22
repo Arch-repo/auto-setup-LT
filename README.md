@@ -26,7 +26,7 @@ root@anto426: ~/auto-setup-lt (main⚡)$ cat rules.txt
 - 🔤 Make sure you are using a standard Nerd Font in your terminal.
 - 💾 Always create a system backup before running terminal bootstrap scripts.
 - 🚫 Uninstallation tasks are ignored to prevent damage to default system tools.
-- 🖼️ The script places '~/neofetch-random.sh' to render fastfetch logos.
+- 🖼️ The script places '~/neofetch-random.sh' and an ASCII fastfetch fallback; VS Code terminals use ASCII, native terminals use Kitty direct images without persistent Fastfetch image cache.
 ```
 
 <p align="center">
